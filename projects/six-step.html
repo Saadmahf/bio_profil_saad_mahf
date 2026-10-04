@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Six-Step PMSM Drive · Saad Mahfoudi</title>
+<meta name="description" content="Simulink implementation of Kwon, Kim & Sul (2012) six-step PMSM operation with instantaneous current control: architecture, simulation results and firmware-style adaptations.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/css/site.css">
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="../index.html"><i>SM</i><span>Saad Mahfoudi</span></a>
+  <nav class="nav" aria-label="Sections"><a href="#arch">Architecture</a><a href="#results">Results</a><a href="#firmware">Firmware</a><a href="#method">Method</a><a href="motor-lab.html">IPMSM lab</a></nav>
+  <div class="tools"><button class="iconbtn" type="button" data-fr-toggle aria-pressed="true" title="Show French translation on hover">FR</button><button class="iconbtn" type="button" data-theme-toggle>☀ Light</button></div>
+</div></header>
+
+<main>
+<div class="wrap p-hero">
+  <a class="crumb" href="../index.html#projects">← all work</a>
+  <p class="eyebrow" style="margin-top:22px" data-fr="Commande moteur · MATLAB/Simulink">Motor control · MATLAB/Simulink</p>
+  <h1 style="margin-top:12px;font-size:clamp(2rem,4.6vw,3.3rem)" data-fr="PMSM six-step avec contrôle instantané du courant">Six-step PMSM with instantaneous current control</h1>
+  <p class="lead" style="margin-top:14px" data-fr="Implémentation de Kwon, Kim et Sul (IEEE TIA 2012) dans mon modèle SVPWM/SPWM existant. Objectif : utiliser toute la tension du bus DC sans perdre le contrôle du courant.">Kwon, Kim &amp; Sul (IEEE TIA 2012) built into my existing SVPWM/SPWM drive model. Goal: use the full DC-bus voltage without losing current control.</p>
+  <dl class="spec">
+    <div><dt>DC link</dt><dd>150 V</dd></div>
+    <div><dt>Poles</dt><dd>6</dd></div>
+    <div><dt>R<sub>s</sub></dt><dd>0.15 Ω</dd></div>
+    <div><dt>L<sub>d</sub> / L<sub>q</sub></dt><dd>3.6 / 4.3 mH</dd></div>
+    <div><dt>λ<sub>f</sub></dt><dd>0.254 V·s</dd></div>
+    <div><dt>I rated</dt><dd>39.5 A rms</dd></div>
+    <div><dt>Control T<sub>s</sub></dt><dd>100 µs</dd></div>
+    <div><dt>Carrier</dt><dd>2 kHz</dd></div>
+  </dl>
+</div>
+
+<section id="arch" style="border-top:1px solid var(--line)"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:8px"><p class="eyebrow">01 · Architecture</p><h2 data-fr="Chaîne de commande (Fig. 4 de l'article)">Control chain (paper Fig. 4)</h2></div>
+  <div class="bench">
+    <div class="bench-h"><span><b>Signal flow</b> · discrete controller @ 100 µs → continuous plant</span><span>click a block</span></div>
+    <div class="bench-b scroll-x"><svg id="chain" class="chart" viewBox="0 0 1000 300" style="min-width:760px" aria-label="Control chain diagram"></svg></div>
+    <div class="bench-f" id="chain-info" data-fr="Cliquez un bloc pour voir son rôle.">Click a block to see what it does.</div>
+  </div>
+  <div class="bench" id="demo"></div>
+</div></section>
+
+<section id="results"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:8px"><p class="eyebrow">02 · Results</p><h2 data-fr="Condition 3 : 1500 tr/min, impulsion de couple 0 → 60 Nm (100–300 ms)">Condition 3 — 1500 rpm, torque pulse 0 → 60 Nm (100–300 ms)</h2>
+  <p class="lead" data-fr="Au-dessus de la vitesse de base, la FEM (≈120 V) dépasse même la limite six-step (95,5 V). Le défluxage impose i_d ≈ −14 A à couple nul.">Above base speed the back-EMF (≈120 V) exceeds even the six-step limit (95.5 V), so flux weakening holds i<sub>d</sub> ≈ −14 A at zero torque.</p></div>
+  <div class="grid2">
+    <div class="bench"><div class="bench-h"><b>d/q currents</b><span>simulated</span></div><div class="bench-b"><div id="c3i"></div><div class="legend" id="c3i-lg"></div></div></div>
+    <div class="bench"><div class="bench-h"><b>Torque</b><span>T<sub>e</sub> vs T<sub>e</sub>*</span></div><div class="bench-b"><div id="c3t"></div><div class="legend" id="c3t-lg"></div></div>
+      <div class="bench-f" data-fr="Le couple plafonne à ≈13,5 Nm en moyenne : à cette vitesse, la tension disponible limite le courant.">Torque settles near <b id="teavg">13.5</b> Nm on average: at this speed, available voltage limits current. This is the voltage/dynamics trade-off of paper Section III.</div></div>
+  </div>
+  <div class="grid2">
+    <div class="bench"><div class="bench-h"><b>Voltage trajectory</b> · stationary frame<span class="seg"><button type="button" id="hexplay" aria-pressed="false">▶ Replay</button></span></div>
+      <div class="bench-b"><div id="hexplot"></div></div>
+      <div class="bench-f" data-fr="99 % des échantillons sont verrouillés sur les 6 sommets : six-step pur, actif en continu.">The command sits on the 6 vertices for <b id="sixfrac">99</b>% of samples: pure six-step, active the whole run.</div></div>
+    <div class="bench"><div class="bench-h"><b>Phase currents i<sub>abc</sub></b><span>rebuilt from i<sub>d</sub>, i<sub>q</sub>, θ</span></div>
+      <div class="bench-b"><div id="iabc"></div><div class="legend" id="iabc-lg"></div></div>
+      <div class="bench-f" data-fr="Faites glisser pour zoomer sur la forme d'onde six-step.">Six-step current ripple is visible at 6× the electrical frequency.</div></div>
+  </div>
+
+  <div class="sec-head" style="margin:28px 0 8px"><h2 data-fr="Tension de pôle commutée : SVPWM contre six-step">Switched pole voltage — SVPWM vs six-step</h2></div>
+  <div class="grid2">
+    <div class="bench"><div class="bench-h"><b>SVPWM region</b> · 30–45 ms<span>v<sub>a0</sub> [V]</span></div><div class="bench-b"><div id="pwmS"></div></div></div>
+    <div class="bench"><div class="bench-h"><b>Six-step region</b> · 150–165 ms<span>v<sub>a0</sub> [V]</span></div><div class="bench-b"><div id="pwmX"></div></div></div>
+  </div>
+  <div class="bench"><div class="bench-h"><b>Phase-a modulation index</b> · exceeds ±1 exactly when six-step engages<span>condition 2 profile, 1000 rpm</span></div><div class="bench-b"><div id="ma"></div></div></div>
+
+  <div class="sec-head" style="margin:28px 0 8px"><h2 data-fr="Gain sur toute la plage de vitesse">Gain across the speed range</h2></div>
+  <div class="grid2">
+    <div class="bench"><div class="bench-h"><b>Max torque</b><span>steady-state optimum per speed</span></div><div class="bench-b"><div id="capT"></div></div></div>
+    <div class="bench"><div class="bench-h"><b>Max power</b><span>steady-state optimum per speed</span></div><div class="bench-b"><div id="capP"></div><div class="legend" id="cap-lg"></div></div></div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><b id="k1">—</b><span data-fr="Vitesse de base (linéaire → six-step)">base speed, linear → six-step</span></div>
+    <div class="kpi"><b>+<span id="k2">—</span><em>%</em></b><span data-fr="Couple à 2500 tr/min">torque at 2500 rpm</span></div>
+    <div class="kpi"><b id="k3">—</b><span data-fr="Puissance crête">peak power</span></div>
+    <div class="kpi"><b>+17<em>%</em></b><span data-fr="Valeur de l'article à comparer (banc réel)">paper's reported gain (real bench), for comparison</span></div>
+  </div>
+
+  <div class="sec-head" style="margin:28px 0 8px"><h2 data-fr="Condition 1 : effet de la Part III (750 tr/min, échelon de couple à 5 ms)">Condition 1 — effect of Part III (750 rpm, torque step at 5 ms)</h2></div>
+  <div class="bench"><div class="bench-h"><b>i<sub>q</sub>, i<sub>d</sub> with and without voltage-reference modification</b><span>simulated</span></div><div class="bench-b"><div id="c1"></div><div class="legend" id="c1-lg"></div></div>
+  <div class="bench-f" data-fr="La Part III injecte l'erreur de courant d'un axe dans la tension de l'autre axe : le courant suit la consigne plus vite pendant la saturation.">Part III adds each axis' current error to the other axis' voltage reference, so the current keeps tracking while the voltage is saturated.</div></div>
+</div></section>
+
+<section id="firmware"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:8px"><p class="eyebrow">03 · Firmware-style adaptations</p><h2 data-fr="Trois idées reprises d'un firmware embarqué">Three ideas taken from embedded firmware</h2></div>
+  <div class="grid2">
+    <div class="bench"><div class="bench-h"><b>Mode decision</b> · geometric vs hysteresis<span id="trans">15 → 1 switches</span></div><div class="bench-b"><div id="mode"></div><div class="legend" id="mode-lg"></div></div>
+      <div class="bench-f" data-fr="Filtre passe-bas adaptatif à ω_r + hystérésis (seuils 1,00 / 0,92) : plus de rebond de mode pendant le transitoire.">Low-pass filter scaled by ω<sub>r</sub> plus a Schmitt trigger (1.00 / 0.92). The exact hexagon test chatters during the PI start-up transient; the filtered flag does not.</div></div>
+    <div class="bench"><div class="bench-h"><b>Commutation instant</b> · ZOH grid vs exact<span>one vertex change</span></div><div class="bench-b"><div id="zoh"></div><div class="legend" id="zoh-lg"></div></div>
+      <div class="bench-f" data-fr="Le firmware connaît ω_r, donc l'instant exact du changement de secteur : commutation 82,8 µs plus tôt que la grille de 100 µs.">Knowing ω<sub>r</sub>, the switch time is computed analytically: the vertex changes <b>82.8 µs</b> before the 100 µs grid would allow (over 80% of a sample).</div></div>
+  </div>
+  <div class="note" data-fr="Troisième adaptation : test de surmodulation en abc, max(V)−min(V) > Vdc. Identique au test hexagone sur 500 points aléatoires et 4000 échantillons, sans trigonométrie.">Third adaptation: overmodulation tested directly in abc, <span class="mono">max(V) − min(V) &gt; V<sub>dc</sub></span>. It matched the hexagon test on 500 random points and all 4000 run samples, with no trigonometry.</div>
+</div></section>
+
+<section id="method"><div class="wrap">
+  <div class="sec-head"><p class="eyebrow">04 · Method &amp; limits</p><h2 data-fr="Choix de modélisation">Modelling choices</h2></div>
+  <div class="grid2">
+    <ul class="ticks">
+      <li data-fr="Modèle généré par script (add_block / add_line), plat, reproductible.">Model built by script (add_block / add_line): flat and reproducible.</li>
+      <li data-fr="Un bloc Memory casse la boucle algébrique Part II ↔ PI, comme un vrai contrôleur numérique.">One Memory block breaks the Part II ↔ PI algebraic loop, as a real digital controller would.</li>
+      <li data-fr="Part III implémentée d'après le texte de la section IV-C.">Part III implemented from the text of Section IV-C, the clearer source.</li>
+      <li data-fr="Pas fixe 10 µs, contrôleur à 100 µs (rapport entier exact).">10 µs fixed step, controller at 100 µs (exact integer ratio).</li>
+    </ul>
+    <ul class="ticks">
+      <li data-fr="37 vérifications unitaires de la logique de commande, hors Simulink.">37 unit checks on the control code, run outside Simulink.</li>
+      <li data-fr="Ajout : borne Vclamp3 = 0,5·Vdc sur la correction Part III (sinon i_d dépassait −78 A).">Added: Vclamp3 = 0.5·V<sub>dc</sub> on the Part III correction (without it i<sub>d</sub> overshot to −78 A).</li>
+      <li data-fr="Gains PI non publiés : stabilisation 35–40 ms contre 7–11 ms dans l'article.">PI gains are not published: settling is 35–40 ms here vs 7–11 ms in the paper.</li>
+      <li data-fr="Le contrôle par angle de tension (comparaison de l'article) n'est pas implémenté.">The paper's voltage-angle-control baseline is not implemented.</li>
+    </ul>
+  </div>
+  <p class="muted" style="margin-top:24px;font-size:.88rem">Reference: Y.-C. Kwon, S. Kim, S.-K. Sul, “Six-Step Operation of PMSM With Instantaneous Current Control,” <i>IEEE Transactions on Industry Applications</i> (2012 per the project brief).</p>
+</div></section>
+<section id="pictures"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">Real figures from the project</p><h2>Original MATLAB outputs</h2><p class="lead">The model and figures exactly as produced by my MATLAB scripts (French labels).</p></div>
+  <div class="gallery big"><button type="button" data-zoom="../assets/img/sixstep-model.jpg" data-cap="six_step_pmsm.slx · generated model"><img src="../assets/img/sixstep-model.jpg" alt="six_step_pmsm.slx · generated model" loading="lazy"><span>six_step_pmsm.slx · generated model</span></button><button type="button" data-zoom="../assets/img/ss-condition3-hexagon.jpg" data-cap="Condition 3 · voltage trajectory"><img src="../assets/img/ss-condition3-hexagon.jpg" alt="Condition 3 · voltage trajectory" loading="lazy"><span>Condition 3 · voltage trajectory</span></button><button type="button" data-zoom="../assets/img/ss-condition3-torque.jpg" data-cap="Condition 3 · electromagnetic torque"><img src="../assets/img/ss-condition3-torque.jpg" alt="Condition 3 · electromagnetic torque" loading="lazy"><span>Condition 3 · electromagnetic torque</span></button><button type="button" data-zoom="../assets/img/ss-iabc-zoom.jpg" data-cap="i_abc during six-step"><img src="../assets/img/ss-iabc-zoom.jpg" alt="i_abc during six-step" loading="lazy"><span>i_abc during six-step</span></button><button type="button" data-zoom="../assets/img/ss-pwm-zoom-sixstep.jpg" data-cap="Six-step pole voltage"><img src="../assets/img/ss-pwm-zoom-sixstep.jpg" alt="Six-step pole voltage" loading="lazy"><span>Six-step pole voltage</span></button><button type="button" data-zoom="../assets/img/ss-capability-torque.jpg" data-cap="Capability curve · torque"><img src="../assets/img/ss-capability-torque.jpg" alt="Capability curve · torque" loading="lazy"><span>Capability curve · torque</span></button><button type="button" data-zoom="../assets/img/ss-mode-hysteresis-comparison.jpg" data-cap="Firmware-style hysteresis vs geometric flag"><img src="../assets/img/ss-mode-hysteresis-comparison.jpg" alt="Firmware-style hysteresis vs geometric flag" loading="lazy"><span>Firmware-style hysteresis vs geometric flag</span></button></div>
+</div></section>
+</main>
+
+<footer><div class="wrap"><a class="crumb" href="../index.html">← Saad Mahfoudi</a><span class="mono">All charts drawn from the model's exported CSV logs</span></div></footer>
+
+<script src="../assets/js/site.js"></script>
+<script src="../assets/js/sixstep-demo.js"></script>
+<script src="../assets/data/sixstep.js"></script>
+<script src="../assets/js/page-sixstep.js"></script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Power Electronics Projects · Saad Mahfoudi</title>
+<meta name="description" content="Smart buck converter, three-phase rectifier with buck-boost, VSI 180° vs SPWM, BMS PCB prototype, IPMSM FOC in Simulink and an ADAS prototype — each with architecture, equations, interactive signals and vehicle applications.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/css/site.css">
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="../index.html"><i>SM</i><span>Saad Mahfoudi</span></a>
+  <nav class="nav" aria-label="Sections"><a href="#buck">Buck</a><a href="#rect">Rectifier</a><a href="#vsi">VSI</a><a href="#bmspcb">BMS PCB</a><a href="#foc">IPMSM FOC</a><a href="#adas">ADAS</a></nav>
+  <div class="tools"><button class="iconbtn" type="button" data-fr-toggle aria-pressed="true" title="Show French translation on hover">FR</button><button class="iconbtn" type="button" data-theme-toggle>☀ Light</button></div>
+</div></header>
+
+<main>
+<div class="wrap p-hero">
+  <a class="crumb" href="../index.html#projects">← all work</a>
+  <p class="eyebrow" style="margin-top:22px">Power electronics · embedded · Simulink</p>
+  <h1 style="margin-top:12px;font-size:clamp(2rem,4.6vw,3.3rem)" data-fr="Projets d'électronique de puissance et de commande">Power electronics &amp; control projects</h1>
+  <p class="lead" style="margin-top:14px" data-fr="Chaque projet : architecture, modèle, commande, signaux, résultat et application véhicule. Les courbes interactives sont des reconstructions illustratives ; les photos et captures sont réelles.">Each project: architecture, model, control, signals, result and where it sits in a vehicle. Interactive curves are <b>illustrative reconstructions</b> from the circuit equations; photos and Simulink captures are real.</p>
+</div>
+
+<!-- BUCK -->
+<section id="buck" style="border-top:1px solid var(--line)"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">NGE Automotive · R&amp;D</p><h2 data-fr="Convertisseur buck piloté par RP2040">Smart buck converter, RP2040-controlled</h2>
+  <p class="lead">A PWM-commandable DC/DC rail for test benches: RP2040 PWM → gate drive → MOSFET → LC filter, with ADC voltage/current feedback and CAN control.</p></div>
+  <div class="bench"><div class="bench-b"><div id="buckarch"></div></div><div class="bench-f"><div class="infopanel" id="buckinfo">Click a block.</div></div></div>
+  <div class="lab">
+    <aside class="ctrl" aria-label="Buck parameters">
+      <label>V<sub>in</sub> <b data-o="vin">12 V</b><input type="range" id="vin" min="6" max="24" step="0.5" value="12"></label>
+      <label>V<sub>out</sub> reference <b data-o="vref">5.0 V</b><input type="range" id="vref" min="1" max="10" step="0.1" value="5"></label>
+      <label>load R <b data-o="rl">2.5 Ω</b><input type="range" id="rl" min="1" max="50" step="0.5" value="2.5"></label>
+      <label>L <b data-o="l">47 µH</b><input type="range" id="l" min="4.7" max="220" step="0.1" value="47"></label>
+      <label>f<sub>sw</sub> <b data-o="f">100 kHz</b><input type="range" id="f" min="20" max="500" step="10" value="100"></label>
+      <div class="row"><button class="iconbtn" type="button" id="bstep">Load step 50 %</button></div>
+      <div class="dash" id="buckdash"></div>
+    </aside>
+    <div class="stack">
+      <div class="bench"><div class="bench-h"><b>One switching period</b><span class="illus">illustrative</span></div><div class="bench-b" id="buckwave"></div></div>
+      <div class="bench"><div class="bench-h"><b>Closed-loop response</b> · averaged model + PI voltage loop</div><div class="bench-b" id="buckloop"></div></div>
+    </div>
+  </div>
+  <div class="grid3">
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/buck-bench.jpg" data-cap="R&D bench: scope, PSU and buck prototype"><img src="../assets/img/buck-bench.jpg" alt="Buck converter bench" loading="lazy"></button>
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/buck-schematic.jpg" data-cap="Prototype next to the gate-drive schematic"><img src="../assets/img/buck-schematic.jpg" alt="Buck prototype with schematic" loading="lazy"></button>
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/buck-ripple.jpg" data-cap="Scope: output ripple and switching interval"><img src="../assets/img/buck-ripple.jpg" alt="Scope capture of output ripple" loading="lazy"></button>
+  </div>
+  <div class="result"><div><span>Model</span><p>V<sub>o</sub> = D·V<sub>in</sub>, ΔI<sub>L</sub>, ΔV<sub>o</sub></p></div><div><span>Control</span><p>PI on V<sub>o</sub> via RP2040 ADC → PWM duty</p></div><div><span>Signal</span><p>gate, i<sub>L</sub>, V<sub>o</sub> ripple</p></div><div><span>Next step</span><p>synchronous rectification (low-side MOSFET)</p></div><div><span>In a vehicle</span><p>12 V / 48 V DC/DC rails, LED and actuator supplies, test-bench power</p></div></div>
+</div></section>
+
+<!-- RECTIFIER -->
+<section id="rect"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">Simulink / Simscape · personal project</p><h2 data-fr="Redresseur triphasé + hacheur buck-boost">Three-phase rectifier with buck-boost regulation</h2>
+  <p class="lead">Built in three stages: R load, RLE load, then a buck-boost chopper that regulates the output above or below the rectified level.</p></div>
+  <div class="split">
+    <div class="bench"><div class="bench-h"><b>Waveforms</b><span class="seg" role="group" aria-label="Stage"><button type="button" data-st="1" aria-pressed="true">1 · R</button><button type="button" data-st="2">2 · RLE</button><button type="button" data-st="3">3 · + buck-boost</button></span></div><div class="bench-b" id="rectwave"></div></div>
+    <div class="stack" style="align-content:start">
+      <div class="bench"><div class="bench-b"><svg id="rectckt" class="chart" viewBox="0 0 420 200" aria-label="Diode bridge circuit"></svg></div></div>
+      <label class="lablbl" id="ddl" hidden>buck-boost duty D <b data-o="d" style="color:var(--ink)">0.60</b><input type="range" id="dd" min="0.1" max="0.85" step="0.01" value="0.6"></label>
+      <div class="dash" id="rectdash"></div>
+    </div>
+  </div>
+  <div class="grid3">
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/rect-stage1.jpg" data-cap="Stage 1 — diode bridge, R load"><img src="../assets/img/rect-stage1.jpg" alt="" loading="lazy"></button>
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/rect-stage3.jpg" data-cap="Stage 3 — buck-boost chopper"><img src="../assets/img/rect-stage3.jpg" alt="" loading="lazy"></button>
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/rect-step.jpg" data-cap="Output step response in Simulink"><img src="../assets/img/rect-step.jpg" alt="" loading="lazy"></button>
+  </div>
+  <div class="result"><div><span>Model</span><p>6-pulse bridge, V<sub>dc</sub> = 3√3·V<sub>m</sub>/π</p></div><div><span>Signal</span><p>ripple at 6·f<sub>grid</sub></p></div><div><span>Control</span><p>duty D: V<sub>o</sub> = D/(1−D)·V<sub>in</sub></p></div><div><span>In a vehicle</span><p>AC charging front-end (before PFC), generator rectification in hybrids</p></div></div>
+</div></section>
+
+<!-- VSI -->
+<section id="vsi"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">Simulink / Simscape · personal project</p><h2 data-fr="Onduleur triphasé : 180° contre SPWM">Three-phase VSI: 180° conduction vs SPWM</h2>
+  <p class="lead">Same RL load, two switching philosophies. The harmonic spectrum shows the trade-off: 180° keeps 5th/7th harmonics; SPWM pushes them up to the carrier band where the load inductance filters them.</p></div>
+  <div class="grid2">
+    <div class="bench"><div class="bench-h"><b>Line voltage v<sub>ab</sub> and phase current</b><span class="seg" role="group" aria-label="Strategy"><button type="button" data-v="180" aria-pressed="true">180°</button><button type="button" data-v="spwm">SPWM m=0.9, 21·f</button></span></div><div class="bench-b" id="vsiwave"></div></div>
+    <div class="bench"><div class="bench-h"><b>Harmonics of v<sub>ab</sub></b><span>% of fundamental</span></div><div class="bench-b" id="vsiharm"></div></div>
+  </div>
+  <div class="grid3">
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/vsi-180-model.jpg" data-cap="180° model"><img src="../assets/img/vsi-180-model.jpg" alt="" loading="lazy"></button>
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/vsi-180-wave.jpg" data-cap="180° voltages in Simulink"><img src="../assets/img/vsi-180-wave.jpg" alt="" loading="lazy"></button>
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/vsi-spwm-wave.jpg" data-cap="SPWM output in Simulink"><img src="../assets/img/vsi-spwm-wave.jpg" alt="" loading="lazy"></button>
+  </div>
+  <div class="result"><div><span>180°</span><p>max fundamental (4/π·V<sub>dc</sub>/2), THD ≈ 31 %, no switching losses</p></div><div><span>SPWM</span><p>linear control of amplitude, harmonics at the carrier</p></div><div><span>Link</span><p>180° conduction is the six-step mode of the <a href="motor-lab.html#mod">IPMSM lab</a></p></div><div><span>In a vehicle</span><p>traction inverters, compressor and pump drives</p></div></div>
+</div></section>
+
+<!-- BMS PCB -->
+<section id="bmspcb"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">Personal project · Proteus / ARES</p><h2 data-fr="BMS : simulation de circuit et PCB">BMS circuit simulation &amp; PCB prototype</h2>
+  <p class="lead">A two-cell bench BMS split into control, charge/discharge, sensing and balancing blocks, simulated in Proteus ISIS and routed in ARES.</p></div>
+  <div class="split">
+    <div class="bench"><div class="bench-b"><div id="pcbarch"></div></div><div class="bench-f"><div class="infopanel" id="pcbinfo">Click a block.</div></div></div>
+    <div class="stack" style="align-content:start">
+      <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/bms-proteus-charge.jpg" data-cap="Proteus: charge/discharge stage and cell readout"><img src="../assets/img/bms-proteus-charge.jpg" alt="" loading="lazy"></button>
+      <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/bms-ares-pcb.jpg" data-cap="ARES PCB layout"><img src="../assets/img/bms-ares-pcb.jpg" alt="" loading="lazy"></button>
+    </div>
+  </div>
+  <div class="result"><div><span>Sense</span><p>per-cell dividers, shunt + op-amp, temperature</p></div><div><span>Act</span><p>charge / discharge MOSFETs, bypass balancing</p></div><div><span>Control</span><p>Arduino Nano firmware</p></div><div><span>Next</span><p>grew into the <a href="bms.html">Simulink/Stateflow BMS</a> and the <a href="ev-twin.html">EV twin</a></p></div></div>
+</div></section>
+
+<!-- IPMSM FOC -->
+<section id="foc"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">Simulink · personal project</p><h2 data-fr="IPMSM : commande vectorielle en Simulink">Interior PMSM — field-oriented control in Simulink</h2>
+  <p class="lead">Outer speed loop → MTPA current references → d/q PI current loops with a polar voltage limiter → inverter → IPMSM plant, with position/speed estimation. The interactive version of this architecture is the <a href="motor-lab.html#loop">IPMSM control lab</a>.</p></div>
+  <div class="grid2">
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r);aspect-ratio:auto" data-zoom="../assets/img/ipmsm-top.jpg" data-cap="Top level: speed/MTPA, current control + estimation, inverter + IPMSM"><img src="../assets/img/ipmsm-top.jpg" alt="IPMSM FOC top level in Simulink" loading="lazy"></button>
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r);aspect-ratio:auto" data-zoom="../assets/img/ipmsm-speed.jpg" data-cap="Speed tracking a series of reference steps"><img src="../assets/img/ipmsm-speed.jpg" alt="Speed response" loading="lazy"></button>
+  </div>
+</div></section>
+
+<!-- ADAS -->
+<section id="adas"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">FST Mohammedia · academic project internship · 05–07/2023</p><h2 data-fr="Prototype véhicule avec fonctions ADAS">Vehicle prototype with ADAS functions</h2>
+  <p class="lead" data-fr="Détection des panneaux, des feux, des véhicules et piétons, et de la voie, pour améliorer la sécurité routière.">Traffic-sign, traffic-light, vehicle/pedestrian and lane detection on an embedded prototype, aimed at road safety.</p></div>
+  <div class="bench"><div class="bench-b"><div id="adasarch"></div></div><div class="bench-f"><div class="infopanel" id="adasinfo">Click a block.</div></div></div>
+  <div class="result"><div><span>Hardware</span><p>Raspberry Pi, camera, vehicle prototype</p></div><div><span>Software</span><p>Python, OpenCV image processing, detection models</p></div><div><span>Functions</span><p>signs · lights · vehicles &amp; pedestrians · lanes</p></div><div><span>In a vehicle</span><p>front camera ADAS: TSR, LKA, AEB perception</p></div></div>
+</div></section>
+</main>
+
+<footer><div class="wrap"><a class="crumb" href="../index.html">← Saad Mahfoudi</a><span class="mono">Interactive curves: illustrative reconstructions · photos and captures: real</span></div></footer>
+
+<script src="../assets/js/site.js"></script>
+<script src="../assets/js/lab/core.js"></script>
+<script src="../assets/js/lab/ui.js"></script>
+<script src="../assets/js/lab/mod.js"></script>
+<script src="../assets/js/lab/page-power.js"></script>
+</body>
+</html>

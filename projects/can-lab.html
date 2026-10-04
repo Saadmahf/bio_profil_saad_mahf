@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CAN-FD &amp; PIO Lab · Saad Mahfoudi</title>
+<meta name="description" content="NGE Automotive embedded test tools: RP2040 PIO-based CAN / CAN FD frame generation and reception, bit-level frame animation, bit timing, and the interface PCB architecture.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/css/site.css">
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="../index.html"><i>SM</i><span>Saad Mahfoudi</span></a>
+  <nav class="nav" aria-label="Sections"><a href="#sys">System</a><a href="#frame">Frame</a><a href="#pio">PIO</a><a href="#timing">Bit timing</a><a href="#pcb">PCB</a></nav>
+  <div class="tools"><button class="iconbtn" type="button" data-fr-toggle aria-pressed="true" title="Show French translation on hover">FR</button><button class="iconbtn" type="button" data-theme-toggle>☀ Light</button></div>
+</div></header>
+
+<main>
+<div class="wrap p-hero">
+  <a class="crumb" href="../index.html#career">← career</a>
+  <p class="eyebrow" style="margin-top:22px">NGE Automotive · R&amp;D embedded systems · test tools</p>
+  <h1 style="margin-top:12px;font-size:clamp(2rem,4.6vw,3.3rem)" data-fr="CAN / CAN FD sur RP2040 avec PIO">CAN / CAN FD on an RP2040, bit by bit</h1>
+  <p class="lead" style="margin-top:14px" data-fr="Le RP2040 n'a pas de contrôleur CAN. Les trames sont construites en C et sérialisées par les machines d'état PIO, avec un timing au cycle près.">The RP2040 has no CAN controller. Frames are built in C and serialised by PIO state machines with cycle-exact timing, then validated on the scope against real ECUs.</p>
+  <dl class="spec">
+    <div><dt>MCU</dt><dd>RP2040 · 2× M0+</dd></div><div><dt>Protocol engine</dt><dd>PIO state machines</dd></div><div><dt>Buses</dt><dd>CAN · CAN FD · LIN</dd></div><div><dt>Host links</dt><dd>USB · UART</dd></div>
+    <div><dt>Firmware</dt><dd>C, Pico SDK, CMake</dd></div><div><dt>Hardware</dt><dd>own interface PCB (KiCad)</dd></div><div><dt>Validation</dt><dd>oscilloscope, bus analyser</dd></div><div><dt>Context</dt><dd>Microchip → RP2040 migration</dd></div>
+  </dl>
+</div>
+
+<section id="sys" style="border-top:1px solid var(--line)"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">01 · Test-tool architecture</p><h2 data-fr="Du PC à l'ECU">From the PC to the ECU</h2></div>
+  <div class="bench"><div class="bench-b"><div id="sysarch"></div></div><div class="bench-f"><div class="infopanel" id="sysinfo">Click a block.</div></div></div>
+</div></section>
+
+<section id="frame"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">02 · Frame on the wire</p><h2 data-fr="Construisez une trame et regardez-la passer sur le bus">Build a frame and watch it travel on the bus</h2>
+  <p class="lead" data-fr="Encodage réel ISO 11898-1 : CRC, bourrage dynamique et bits de bourrage fixes en CAN FD.">Real ISO 11898-1 encoding: CRC, dynamic bit stuffing, and in CAN FD the stuff-count field and fixed stuff bits.</p></div>
+  <div class="lab">
+    <aside class="ctrl" aria-label="Frame builder">
+      <div class="seg" role="group" aria-label="Frame type" style="width:100%"><button type="button" data-t="c" aria-pressed="true" style="flex:1">CAN 2.0</button><button type="button" data-t="fd" style="flex:1">CAN FD</button></div>
+      <label for="cid">identifier (11-bit, hex)<input id="cid" type="text" value="1A0" maxlength="3" style="font:500 .9rem var(--f-mono);padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%"></label>
+      <label for="cdata">data bytes (hex)<input id="cdata" type="text" value="0E E1 04 47 03 33" style="font:500 .9rem var(--f-mono);padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%"></label>
+      <label for="cbrs" data-fdonly hidden>bit-rate switch<select id="cbrs"><option value="1">BRS on · 500 kbit/s → 2 Mbit/s</option><option value="0">BRS off · 500 kbit/s</option></select></label>
+      <label>animation speed <b data-o="spd">slow</b><input type="range" id="spd" min="0.2" max="3" step="0.1" value="0.8"></label>
+      <div class="row"><button class="iconbtn" type="button" id="send">▶ Transmit</button><button class="iconbtn" type="button" id="pause">❚❚</button></div>
+      <div class="dash" id="fdash"></div>
+    </aside>
+    <div class="stack">
+      <div class="bench"><div class="bench-h"><span><span class="dot-live"></span><b>CAN bus</b> · RP2040 node → ECU</span><span id="cur" class="mono"></span></div><div class="bench-b" id="bus"></div></div>
+      <div class="bench"><div class="bench-h"><b>Bit stream</b><span>stuff bits: <span style="color:var(--violet)">◆ dynamic</span> · <span style="color:var(--bad)">■ fixed</span></span></div><div class="bench-b" id="strip"></div></div>
+      <div class="bench scroll-x"><table class="cmp" id="fields"></table></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="pio"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">03 · Low-level path</p><h2 data-fr="Du code C aux broches : TX et RX">From C code to the pins: TX and RX</h2></div>
+  <div class="bench"><div class="bench-b"><div id="pioarch"></div></div><div class="bench-f"><div class="infopanel" id="pioinfo">Click a block. Bits move along the TX path when a frame is transmitted.</div></div></div>
+  <div class="grid2">
+    <div class="bench"><div class="bench-h"><b>Why PIO</b></div><div class="bench-b"><ul class="ticks">
+      <li>No CAN peripheral on the RP2040: framing, stuffing and timing must be done by the tool itself.</li>
+      <li>Bit-banging from the CPU jitters with interrupts and cache/flash latency; a PIO state machine runs one instruction per clock with no jitter.</li>
+      <li>The clock divider sets the time quantum; side-set drives TX in the same cycle as the instruction.</li>
+      <li>The RX state machine waits for the SOF falling edge (hard sync), then samples at the sample point and resynchronises on recessive→dominant edges.</li>
+      <li>The CPU only builds frames, checks CRC and serves the application; FIFOs / DMA decouple it from bit time.</li></ul></div></div>
+    <div class="bench"><div class="bench-h"><b>Sketch of the TX state machine</b><span class="illus">illustrative · not the NGE source</span></div><div class="bench-b"><pre class="code" style="background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:12px/1.55 var(--f-mono);overflow:auto;margin:0">; one CAN bit = N_tq time quanta, clkdiv sets 1 tq
+.program can_tx
+pull block            ; 32 pre-stuffed bits from TX FIFO
+bitloop:
+    out x, 1          ; next bit
+    mov pins, x  [tq_seg-1] ; drive TX for one bit time
+    ; (arbitration: compare RX vs TX here, stop on loss)
+    jmp !osre bitloop
+</pre></div></div>
+  </div>
+</div></section>
+
+<section id="timing"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">04 · Bit timing</p><h2 data-fr="Quanta, point d'échantillonnage, synchronisation">Time quanta, sample point and synchronisation</h2></div>
+  <div class="split">
+    <div class="bench"><div class="bench-h"><b>One nominal bit</b><span id="bt" class="mono"></span></div><div class="bench-b" id="btplot"></div></div>
+    <div class="stack" style="align-content:start">
+      <label class="lablbl">time quanta per bit <b data-o="tq" style="color:var(--ink)">16</b><input type="range" id="ntq" min="8" max="25" value="16"></label>
+      <label class="lablbl">sample point <b data-o="sp" style="color:var(--ink)">75 %</b><input type="range" id="spp" min="60" max="90" value="75"></label>
+      <label class="lablbl">propagation delay (bus + transceivers) <b data-o="pd" style="color:var(--ink)">220 ns</b><input type="range" id="pd" min="50" max="900" step="10" value="220"></label>
+      <div class="infopanel" id="btnote"></div>
+    </div>
+  </div>
+  <div class="grid3">
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/canfd-scope.jpg" data-cap="Scope: arbitration phase stepping up into the faster CAN FD data phase"><img src="../assets/img/canfd-scope.jpg" alt="CAN FD scope capture" loading="lazy"></button>
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/canfd-bit-timing.jpg" data-cap="Bit timing measured with cursors during bit-rate switching"><img src="../assets/img/canfd-bit-timing.jpg" alt="CAN bit timing measurement" loading="lazy"></button>
+    <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/scope-can-lin.jpg" data-cap="CAN/LIN frame timing during validation"><img src="../assets/img/scope-can-lin.jpg" alt="CAN and LIN scope capture" loading="lazy"></button>
+  </div>
+  <p class="muted" style="font-size:.85rem">Real captures from the bench (NGE Automotive).</p>
+</div></section>
+
+<section id="pcb"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">05 · Interface hardware</p><h2 data-fr="Architecture de la carte d'interface">Interface board architecture</h2>
+  <p class="lead" data-fr="Cliquez un composant pour son rôle.">Click a component for its role.</p></div>
+  <div class="split">
+    <div class="bench"><div class="bench-b"><div id="pcbarch"></div></div></div>
+    <div class="stack" style="align-content:start"><div class="infopanel" id="pcbinfo">Click a component.</div>
+      <button class="card thumb" style="border:1px solid var(--line);border-radius:var(--r)" data-zoom="../assets/img/can-board-3d.jpg" data-cap="KiCad 3D render of my CAN interface board"><img src="../assets/img/can-board-3d.jpg" alt="KiCad 3D render of the CAN interface board" loading="lazy"></button></div>
+  </div>
+  <div class="result">
+    <div><span>Requirement</span><p>CAN / CAN FD / LIN test tool on a controller-less MCU</p></div>
+    <div><span>Implementation</span><p>C frame builder + PIO TX/RX state machines</p></div>
+    <div><span>Hardware</span><p>transceivers, protection, termination, own PCB</p></div>
+    <div><span>Communication</span><p>frames to and from automotive ECUs, USB/UART to the PC</p></div>
+    <div><span>Measurement</span><p>scope: bit time, BRS transition, frame timing</p></div>
+    <div><span>Where used</span><p>ECU validation benches, end-of-line testers, network diagnostics</p></div>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap"><a class="crumb" href="../index.html">← Saad Mahfoudi</a><span class="mono">Frame encoding computed in the browser · scope images are real</span></div></footer>
+
+<script src="../assets/js/site.js"></script>
+<script src="../assets/js/lab/ui.js"></script>
+<script src="../assets/js/lab/can.js"></script>
+<script src="../assets/js/lab/page-can.js"></script>
+</body>
+</html>

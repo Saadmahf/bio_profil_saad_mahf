@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EV Digital Twin · Saad Mahfoudi</title>
+<meta name="description" content="Integrated EV powertrain and battery management system: battery cells, BMS, contactors, HV bus, inverter, IPMSM and wheels in one interactive digital twin with manual and automatic driving.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/css/site.css">
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="../index.html"><i>SM</i><span>Saad Mahfoudi</span></a>
+  <nav class="nav" aria-label="Sections"><a href="#twin">Twin</a><a href="#arch">Architecture</a><a href="#bms">BMS</a><a href="#can">CAN</a><a href="#bus">DC bus</a></nav>
+  <div class="tools"><button class="iconbtn" type="button" data-fr-toggle aria-pressed="true" title="Show French translation on hover">FR</button><button class="iconbtn" type="button" data-theme-toggle>☀ Light</button></div>
+</div></header>
+
+<main>
+<div class="wrap p-hero">
+  <a class="crumb" href="../index.html#projects">← all work</a>
+  <p class="eyebrow" style="margin-top:22px" data-fr="Projet intégré · groupe motopropulseur VE + BMS">Integrated project · EV powertrain + BMS</p>
+  <h1 style="margin-top:12px;font-size:clamp(2rem,4.6vw,3.3rem)" data-fr="Jumeau numérique VE : de la batterie à la roue">EV digital twin — from battery to wheel</h1>
+  <p class="lead" style="margin-top:14px" data-fr="Mon projet BMS (superviseur Stateflow, EKF, SOP) et mon projet de commande PMSM réunis dans un seul véhicule. Choisissez une vitesse ou un cycle : la batterie, le BMS, le bus DC, l'onduleur et le moteur réagissent ensemble.">My BMS work (Stateflow supervisor, EKF SOC, charge-current limits) and my PMSM control work joined in one vehicle. Choose a speed or a cycle: battery, BMS, DC bus, inverter and motor respond together.</p>
+  <p style="margin-top:10px"><span class="illus">Illustrative vehicle · 96S pack · reconstructed / simulated demonstration</span></p>
+</div>
+
+<section id="twin" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="lab">
+    <aside id="ctrl" aria-label="Simulation controls"></aside>
+    <div class="stack">
+      <div class="bench"><div class="bench-h"><span><span class="dot-live"></span><b>Vehicle</b></span><span id="bmspill"></span></div><div class="bench-b" id="car"></div></div>
+      <div id="dash"></div>
+      <div class="bench"><div class="bench-h"><b>Battery behaviour</b><span>last 60 s</span></div><div class="bench-b" id="roll"></div></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="arch"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">01 · System architecture</p><h2 data-fr="Puissance HV, signaux BT, CAN et mécanique séparés">HV power, LV signals, CAN and mechanical power, drawn separately</h2>
+  <p class="lead" data-fr="En traction, la puissance va de la batterie vers la roue ; au freinage récupératif, les flèches s'inversent.">In traction power flows battery → wheel; in regenerative braking the arrows reverse. Click any block.</p></div>
+  <div class="bench"><div class="bench-b"><div id="sys"></div></div><div class="bench-f"><div class="infopanel" id="sysinfo">Click a block: battery, BMS, contactors, inverter, motor, CAN, auxiliaries.</div></div></div>
+</div></section>
+
+<section id="bms"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">02 · Battery management</p><h2 data-fr="Cellules, équilibrage, états, défauts et estimation du SOC">Cells, balancing, states, faults and SOC estimation</h2></div>
+  <div class="split">
+    <div class="bench"><div class="bench-h"><b>96 series cells</b> · colour = cell voltage<span id="cellstat" class="mono"></span></div>
+      <div class="bench-b"><div class="cells" id="cells" aria-label="Cell voltages"></div>
+      <div class="legend"><span><i style="background:var(--sig)"></i>low</span><span><i style="background:var(--hv)"></i>high</span><span><i style="background:var(--violet)"></i>bleed resistor on (balancing)</span></div></div></div>
+    <div class="stack" style="align-content:start">
+      <div class="bench"><div class="bench-h"><b>Supervisor state</b><span>simplified from my Stateflow chart</span></div><div class="bench-b"><svg id="fsm" class="chart" viewBox="0 0 520 170" aria-label="BMS state machine"></svg></div></div>
+      <div class="dash" id="bmsdash"></div>
+      <div class="infopanel" id="faultbox"></div>
+    </div>
+  </div>
+  <div class="bench"><div class="bench-h"><b>SOC estimation</b> · coulomb counting vs extended Kalman filter<span>CC starts at a wrong SOC with a 2 % current-gain error</span></div><div class="bench-b" id="soc"></div>
+    <div class="bench-f" data-fr="Le comptage coulométrique garde son erreur initiale et dérive ; l'EKF corrige avec la tension mesurée.">Coulomb counting keeps its initial error and drifts with the sensor gain error; the EKF uses the measured voltage through the 1-RC cell model and converges.</div></div>
+  <div id="bms-eq"></div>
+</div></section>
+
+<section id="can"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">03 · Communication</p><h2 data-fr="Trafic CAN entre VCU, BMS et contrôleur moteur">CAN traffic between VCU, BMS and motor controller</h2>
+  <p class="lead" data-fr="Jeu de messages illustratif (pas une DBC constructeur). Les octets suivent la simulation.">Illustrative message set, not an OEM DBC. Payload bytes follow the simulation. Bit-level framing is in the <a href="can-lab.html">CAN / PIO lab</a>.</p></div>
+  <div class="bench scroll-x"><table class="cantab" id="cantab"></table></div>
+</div></section>
+
+<section id="bus"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">04 · DC bus</p><h2 data-fr="Le bus DC sous la charge réelle de l'onduleur et des auxiliaires">The DC bus under inverter and auxiliary load</h2></div>
+  <div class="bench"><div class="bench-h"><b>Inverter &amp; DC link</b><span id="busstat" class="mono"></span></div><div class="bench-b" id="scope"></div></div>
+  <div class="split">
+    <div class="bench"><div class="bench-h"><b>FFT · V<sub>bus</sub></b></div><div class="bench-b" id="fft"></div></div>
+    <div class="stack" style="align-content:start"><div class="dash" id="ripdash"></div><div class="infopanel" id="ripnote"></div></div>
+  </div>
+  <div class="result">
+    <div><span>Input</span><p>driver speed request or drive cycle, aux loads, faults</p></div>
+    <div><span>Model</span><p>96S 1-RC pack, BMS supervisor, IPMSM, DC link, vehicle</p></div>
+    <div><span>Control</span><p>VCU speed loop · FOC · DC-bus utilisation · BMS limits</p></div>
+    <div><span>Signal</span><p>I<sub>bat</sub>, V<sub>bat</sub>, SOC, cell V, CAN frames, V<sub>bus</sub> ripple</p></div>
+    <div><span>Analysis</span><p>EKF vs coulomb SOC, ripple pk-pk/RMS, FFT peaks</p></div>
+    <div><span>Conclusion</span><p>Battery limits (charge current, regen block, faults) directly shape motor torque and vehicle response.</p></div>
+  </div>
+</div></section>
+<section id="pictures"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">Real screenshots</p><h2>The real BMS work behind the twin</h2><p class="lead">My BMS console driving the Stateflow supervisor, and my earlier BMS hardware prototype.</p></div>
+  <div class="gallery big"><button type="button" data-zoom="../assets/img/bmsdash-energy.jpg" data-cap="BMS console · energy flow in regeneration"><img src="../assets/img/bmsdash-energy.jpg" alt="BMS console · energy flow in regeneration" loading="lazy"><span>BMS console · energy flow in regeneration</span></button><button type="button" data-zoom="../assets/img/bmsdash-cells.jpg" data-cap="BMS console · cell voltages and contactors"><img src="../assets/img/bmsdash-cells.jpg" alt="BMS console · cell voltages and contactors" loading="lazy"><span>BMS console · cell voltages and contactors</span></button><button type="button" data-zoom="../assets/img/bmsdash-control.jpg" data-cap="BMS console · contactor circuit and state machine"><img src="../assets/img/bmsdash-control.jpg" alt="BMS console · contactor circuit and state machine" loading="lazy"><span>BMS console · contactor circuit and state machine</span></button><button type="button" data-zoom="../assets/img/bms-proteus-charge.jpg" data-cap="BMS prototype · Proteus charge stage"><img src="../assets/img/bms-proteus-charge.jpg" alt="BMS prototype · Proteus charge stage" loading="lazy"><span>BMS prototype · Proteus charge stage</span></button><button type="button" data-zoom="../assets/img/bms-ares-pcb.jpg" data-cap="BMS prototype · ARES PCB"><img src="../assets/img/bms-ares-pcb.jpg" alt="BMS prototype · ARES PCB" loading="lazy"><span>BMS prototype · ARES PCB</span></button></div>
+</div></section>
+</main>
+
+<footer><div class="wrap"><a class="crumb" href="../index.html">← Saad Mahfoudi</a><span class="mono">Reconstructed / simulated demonstration · not measured data</span></div></footer>
+
+<script src="../assets/js/site.js"></script>
+<script src="../assets/js/lab/core.js"></script>
+<script src="../assets/js/lab/sim.js"></script>
+<script src="../assets/js/lab/ui.js"></script>
+<script src="../assets/js/lab/rig.js"></script>
+<script src="../assets/js/lab/page-twin.js"></script>
+</body>
+</html>

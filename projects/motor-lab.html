@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>IPMSM Control Lab · Saad Mahfoudi</title>
+<meta name="description" content="Interactive IPMSM drive laboratory: SPWM, SVPWM and six-step modulation, DC-bus voltage utilisation control, closed-loop FOC speed control, and a vehicle that follows your speed command.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/css/site.css">
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="../index.html"><i>SM</i><span>Saad Mahfoudi</span></a>
+  <nav class="nav" aria-label="Sections"><a href="#rig">Drive</a><a href="#mod">Modulation</a><a href="#util">DC-bus control</a><a href="#loop">Speed loop</a><a href="#foc">FOC</a><a href="#signals">Signals</a></nav>
+  <div class="tools"><button class="iconbtn" type="button" data-fr-toggle aria-pressed="true" title="Show French translation on hover">FR</button><button class="iconbtn" type="button" data-theme-toggle>☀ Light</button></div>
+</div></header>
+
+<main>
+<div class="wrap p-hero">
+  <a class="crumb" href="../index.html#projects">← all work</a>
+  <p class="eyebrow" style="margin-top:22px" data-fr="Commande moteur · laboratoire interactif">Motor control · interactive laboratory</p>
+  <h1 style="margin-top:12px;font-size:clamp(2rem,4.6vw,3.3rem)" data-fr="Laboratoire de commande IPMSM">IPMSM control laboratory</h1>
+  <p class="lead" style="margin-top:14px" data-fr="Batterie → bus DC → onduleur → IPMSM → roue, en boucle fermée. Choisissez une vitesse : le véhicule, les courants, la modulation et les signaux de l'onduleur réagissent.">Battery → DC bus → inverter → IPMSM → wheel, in closed loop. Pick a speed: the vehicle, the currents, the modulation strategy and the inverter signals respond.</p>
+  <p style="margin-top:10px"><span class="illus">Illustrative machine &amp; vehicle parameters · computed live</span></p>
+</div>
+
+<section id="rig" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="lab">
+    <aside id="ctrl" aria-label="Simulation controls"></aside>
+    <div class="stack">
+      <div class="bench"><div class="bench-h"><span><span class="dot-live"></span><b>Vehicle</b> · closed-loop speed control</span><span id="carlab" class="mono"></span></div><div class="bench-b" id="car"></div></div>
+      <div id="dash"></div>
+      <div class="bench"><div class="bench-h"><b>Power &amp; feedback architecture</b><span>click a block · arrows show energy direction</span></div>
+        <div class="bench-b"><div id="arch"></div></div><div class="bench-f"><div class="infopanel" id="archinfo" data-fr="Cliquez un bloc pour l'expliquer.">Click a block to see what it does.</div></div></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="mod"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">01 · Modulation</p><h2 data-fr="Trois stratégies de modulation, trois visualisations">Three modulation strategies, three visualisations</h2>
+  <p class="lead" data-fr="Même onduleur 360 V. Ce qui change : comment la référence de tension devient des impulsions de grille.">Same 360 V inverter. What changes is how the voltage reference becomes gate pulses.</p></div>
+  <div class="bench"><div class="bench-h"><b>A · SPWM</b> — sine references vs triangular carrier<span>carrier → comparator → gates → v<sub>ab</sub> → current</span></div><div class="bench-b" id="spwm"></div></div>
+  <div class="bench"><div class="bench-h"><b>B · SVPWM</b> — space-vector plane, dwell times, switching sequence<span>V<sub>α</sub>/V<sub>β</sub> · sectors · T1 T2 T0</span></div><div class="bench-b" id="svpwm"></div></div>
+  <div class="bench"><div class="bench-h"><b>C · Six-step</b> — one switching event per 60° electrical<span>fixed |V| = 2V<sub>dc</sub>/π · torque by voltage angle</span></div><div class="bench-b" id="six"></div></div>
+  <div class="bench" id="sixdemo"></div>
+  <p class="muted" style="font-size:.9rem" data-fr="Les résultats Simulink du six-step (Kwon, Kim, Sul) sont sur une page dédiée.">The Simulink implementation of six-step with instantaneous current control (Kwon, Kim &amp; Sul) and its results are on <a href="six-step.html">its own page →</a></p>
+</div></section>
+
+<section id="util"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">02 · Global DC-bus voltage utilisation</p><h2 data-fr="Utiliser toute la tension de la batterie">Using all of the battery voltage</h2>
+  <p class="lead" data-fr="Un contrôleur de haut niveau compare la tension demandée à la tension disponible et choisit la région : linéaire, SVPWM, surmodulation, six-step.">A supervisory layer compares the voltage the current loop asks for with what the DC bus can deliver, then picks the region: linear, SVPWM, overmodulation or six-step.</p></div>
+  <div class="bench"><div class="bench-h"><b>Voltage availability control</b><span>live, follows the drive above</span></div><div class="bench-b"><div id="uarch"></div></div></div>
+  <div class="split">
+    <div class="bench"><div class="bench-h"><b>Voltage map</b> · required vs available<span>operating point moves with speed</span></div><div class="bench-b"><div id="vmap"></div><div class="legend" id="vmap-lg"></div></div></div>
+    <div class="stack" style="align-content:start">
+      <div class="dash" id="regdash"></div>
+      <div class="infopanel" id="regnote"></div>
+      <table class="cmp" id="regtab"><thead><tr><th>region</th><th>M = |V|/(2V<sub>dc</sub>/π)</th><th>strategy</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+  <div id="util-eq"></div>
+</div></section>
+
+<section id="loop"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">03 · Closed-loop speed control</p><h2 data-fr="Boucle de vitesse complète avec FOC">Full speed loop with field-oriented control</h2>
+  <p class="lead" data-fr="Les valeurs sur les flèches sont celles de la simulation en cours.">Values on the wires are the live simulation values.</p></div>
+  <div class="bench"><div class="bench-h"><b>ω<sub>ref</sub> → speed PI → T<sub>ref</sub> → MTPA/FW → i<sub>d</sub>*, i<sub>q</sub>* → current PI → v<sub>d</sub>*, v<sub>q</sub>* → inverse Park → modulator → inverter → IPMSM → vehicle → ω</b></div>
+    <div class="bench-b"><div id="larch"></div></div><div class="bench-f"><div class="infopanel" id="larchinfo">Click a block to see its role and equation.</div></div></div>
+  <div id="loop-eq"></div>
+</div></section>
+
+<section id="foc"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">04 · FOC</p><h2 data-fr="Repère dq tournant : courant de flux et courant de couple">Rotating dq frame: flux current and torque current</h2></div>
+  <div class="split">
+    <div class="bench"><div class="bench-h"><b>IPMSM cross-section</b><span>rotor, d/q axes and stator current vector</span></div><div class="bench-b" id="motor"></div></div>
+    <div class="bench"><div class="bench-h"><b>Transform chain</b><span>live numbers</span></div><div class="bench-b"><table class="cmp" id="chain"></table></div></div>
+  </div>
+  <div id="foc-eq"></div>
+</div></section>
+
+<section id="signals"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">05 · Inverter signals</p><h2 data-fr="Ce que l'onduleur produit vraiment">What the inverter actually produces</h2>
+  <p class="lead" data-fr="Gates, tensions et courants recalculés à partir du point de fonctionnement courant, avec le bus DC et sa FFT.">Gates, voltages and currents re-synthesised from the current operating point, including the DC-link and its FFT.</p></div>
+  <div class="bench"><div class="bench-h"><b>Signal lab</b><span id="sigstat" class="mono"></span></div><div class="bench-b" id="scope"></div></div>
+  <div class="grid2">
+    <div class="bench"><div class="bench-h"><b>FFT · DC-bus voltage</b></div><div class="bench-b" id="fftv"></div></div>
+    <div class="bench"><div class="bench-h"><b>FFT · phase current i<sub>a</sub></b></div><div class="bench-b" id="ffti"></div></div>
+  </div>
+  <div class="result">
+    <div><span>Input</span><p>speed command, load, V<sub>dc</sub>, f<sub>sw</sub></p></div>
+    <div><span>Model</span><p>IPMSM dq equations, vehicle longitudinal dynamics</p></div>
+    <div><span>Control</span><p>speed PI → MTPA / flux weakening → current loop</p></div>
+    <div><span>Modulation</span><p>SPWM · SVPWM · overmod · six-step, chosen by V<sub>dc</sub> availability</p></div>
+    <div><span>Signal</span><p>gates, v<sub>ab</sub>, i<sub>abc</sub>, T<sub>e</sub>, i<sub>dc</sub>, V<sub>bus</sub></p></div>
+    <div><span>Conclusion</span><p>Six-step extends torque above base speed; SVPWM gives the cleanest current in the linear range.</p></div>
+  </div>
+  <div class="sec-head" style="margin:20px 0 0"><h3 data-fr="Où c'est utilisé dans un véhicule">Where this is used in a real vehicle</h3></div>
+  <div class="where" id="where"></div>
+</div></section>
+<section id="pictures"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">Real screenshots</p><h2>From my Simulink models</h2><p class="lead">The IPMSM FOC and six-step models behind this lab.</p></div>
+  <div class="gallery big"><button type="button" data-zoom="../assets/img/ipmsm-top.jpg" data-cap="IPMSM FOC · top level"><img src="../assets/img/ipmsm-top.jpg" alt="IPMSM FOC · top level" loading="lazy"><span>IPMSM FOC · top level</span></button><button type="button" data-zoom="../assets/img/ipmsm-current.jpg" data-cap="Current control · PI_Vd / PI_Vq + polar limiter"><img src="../assets/img/ipmsm-current.jpg" alt="Current control · PI_Vd / PI_Vq + polar limiter" loading="lazy"><span>Current control · PI_Vd / PI_Vq + polar limiter</span></button><button type="button" data-zoom="../assets/img/ipmsm-plant.jpg" data-cap="Inverter + IPMSM plant"><img src="../assets/img/ipmsm-plant.jpg" alt="Inverter + IPMSM plant" loading="lazy"><span>Inverter + IPMSM plant</span></button><button type="button" data-zoom="../assets/img/ipmsm-speed.jpg" data-cap="Speed response to steps"><img src="../assets/img/ipmsm-speed.jpg" alt="Speed response to steps" loading="lazy"><span>Speed response to steps</span></button><button type="button" data-zoom="../assets/img/sixstep-model.jpg" data-cap="Six-step model (Kwon, Kim & Sul)"><img src="../assets/img/sixstep-model.jpg" alt="Six-step model (Kwon, Kim & Sul)" loading="lazy"><span>Six-step model (Kwon, Kim & Sul)</span></button><button type="button" data-zoom="../assets/img/ss-iabc-zoom.jpg" data-cap="Six-step phase currents (MATLAB figure)"><img src="../assets/img/ss-iabc-zoom.jpg" alt="Six-step phase currents (MATLAB figure)" loading="lazy"><span>Six-step phase currents (MATLAB figure)</span></button></div>
+</div></section>
+</main>
+
+<footer><div class="wrap"><a class="crumb" href="../index.html">← Saad Mahfoudi</a><span class="mono">Illustrative model · not OEM data</span></div></footer>
+
+<script src="../assets/js/site.js"></script>
+<script src="../assets/js/sixstep-demo.js"></script>
+<script src="../assets/js/lab/core.js"></script>
+<script src="../assets/js/lab/sim.js"></script>
+<script src="../assets/js/lab/ui.js"></script>
+<script src="../assets/js/lab/mod.js"></script>
+<script src="../assets/js/lab/rig.js"></script>
+<script src="../assets/js/lab/page-motorlab.js"></script>
+</body>
+</html>

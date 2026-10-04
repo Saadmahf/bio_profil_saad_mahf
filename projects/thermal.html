@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Échangeur Thermique · Saad Mahfoudi</title>
+<meta name="description" content="Échangeur thermique — modélisation et commande multivariable: 6-state nonlinear model, linearisation, state feedback, Luenberger observer and Takagi-Sugeno representation, simulated live.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/css/site.css">
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="../index.html"><i>SM</i><span>Saad Mahfoudi</span></a>
+  <nav class="nav" aria-label="Sections"><a href="#plant">Plant</a><a href="#loop">Control</a><a href="#obs">Observer</a><a href="#ts">Takagi–Sugeno</a><a href="#vehicle">In a vehicle</a></nav>
+  <div class="tools"><button class="iconbtn" type="button" data-fr-toggle aria-pressed="true" title="Show French translation on hover">FR</button><button class="iconbtn" type="button" data-theme-toggle>☀ Light</button></div>
+</div></header>
+
+<main>
+<div class="wrap p-hero">
+  <a class="crumb" href="../index.html#projects">← all work</a>
+  <p class="eyebrow" style="margin-top:22px">Control theory · MIMO · MATLAB / Simulink</p>
+  <h1 style="margin-top:12px;font-size:clamp(2rem,4.6vw,3.3rem)">Échangeur thermique — modélisation &amp; commande multivariable</h1>
+  <p class="lead" style="margin-top:14px" data-fr="Échangeur tubulaire à contre-courant : 6 états, 2 entrées, 2 sorties. Modèle non linéaire, linéarisation, retour d'état, observateur de Luenberger et représentation Takagi–Sugeno, simulés en direct.">Counter-current tubular heat exchanger: 6 states, 2 inputs, 2 outputs. Nonlinear model, linearisation, state feedback, Luenberger observer and a Takagi–Sugeno representation — all simulated live with the parameters of my original study.</p>
+  <dl class="spec">
+    <div><dt>States</dt><dd>6</dd></div><div><dt>Inputs / outputs</dt><dd>2 / 2</dd></div><div><dt>Controllability</dt><dd>rank 6 ✓</dd></div><div><dt>Observability</dt><dd>rank 6 ✓</dd></div>
+    <div><dt>Closed-loop poles</dt><dd>−1 … −6</dd></div><div><dt>Observer poles</dt><dd>−3 … −18</dd></div><div><dt>T–S local models</dt><dd>4</dd></div><div><dt>Original study</dt><dd><a href="https://saadmahf.github.io/-changeurThermique/" target="_blank" rel="noopener">project page ↗</a></dd></div>
+  </dl>
+</div>
+
+<section id="plant" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="lab">
+    <aside class="ctrl" aria-label="Simulation controls">
+      <div class="mono" style="font-size:.72rem;color:var(--muted)">REFERENCES</div>
+      <label>T<sub>2</sub> ref (hot outlet) <b data-o="r1">60.0 °C</b><input type="range" id="r1" min="55" max="65" step="0.5" value="60"></label>
+      <label>T<sub>4</sub> ref (cold outlet) <b data-o="r2">45.0 °C</b><input type="range" id="r2" min="36" max="48" step="0.5" value="45"></label>
+      <div class="row"><button type="button" class="iconbtn" id="kick">Disturb observer</button><button type="button" class="iconbtn" id="rst">↺ Restart</button></div>
+      <label>simulation speed <b data-o="sp">×1</b><input type="range" id="sp" min="0.5" max="4" step="0.5" value="1"></label>
+      <div class="dash" id="xs"></div>
+      <p class="mono" style="font-size:.66rem;color:var(--muted);margin:0">Nonlinear plant integrated with RK4 (10 ms). Controller and observer designed on the model linearised at T<sub>2</sub> = 60 °C, T<sub>4</sub> = 40 °C.</p>
+    </aside>
+    <div class="stack">
+      <div class="bench"><div class="bench-h"><span><span class="dot-live"></span><b>Counter-current exchanger</b></span><span class="mono" id="hx-stat"></span></div><div class="bench-b" id="hx"></div>
+        <div class="bench-f" data-fr="Le modèle donne une entrée chaude effective à e1/a1 = 75 °C et une entrée froide à e2/a2 = 16 °C.">The model's flow terms a·x·(T_in − T) give an effective hot inlet at e₁/a₁ = 75 °C and a cold inlet at e₂/a₂ = 16 °C. Particle speed follows the valve positions x₂ and x₅.</div></div>
+      <div class="bench"><div class="bench-h"><b>Outputs and commands</b><span>last 15 s</span></div><div class="bench-b" id="roll"></div></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="loop"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">01 · Control architecture</p><h2 data-fr="Retour d'état sur l'état estimé">State feedback on the estimated state</h2></div>
+  <div class="bench"><div class="bench-b"><div id="larch"></div></div><div class="bench-f"><div class="infopanel" id="linfo">Click a block.</div></div></div>
+  <div id="eq1"></div>
+</div></section>
+
+<section id="obs"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">02 · Luenberger observer</p><h2 data-fr="Deux mesures, six états reconstruits">Two measurements, six reconstructed states</h2>
+  <p class="lead" data-fr="Seuls T2 et T4 sont mesurés ; les positions et vitesses des vannes sont estimées. Appuyez sur « Disturb observer » pour voir la convergence.">Only T₂ and T₄ are measured; valve positions and velocities are estimated. Press “Disturb observer” to see the estimation error converge (observer poles 3× faster than the loop).</p></div>
+  <div class="bench"><div class="bench-h"><b>Real vs estimated</b><span>last 15 s</span></div><div class="bench-b" id="obsroll"></div></div>
+</div></section>
+
+<section id="ts"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">03 · Takagi–Sugeno representation</p><h2 data-fr="Quatre modèles locaux pondérés">Four weighted local models</h2>
+  <p class="lead" data-fr="Les non-linéarités x1·x2 et x4·x5 sont écrites A(z)·x avec z1 = x2, z2 = x5. Avec deux fonctions d'appartenance par variable, on obtient 4 modèles locaux exacts dans le domaine.">The products x₁x₂ and x₄x₅ are written A(z)·x with premise variables z₁ = x₂, z₂ = x₅. Two membership functions per premise give 4 local models whose weighted sum is exact inside the premise domain.</p></div>
+  <div class="split">
+    <div class="bench"><div class="bench-h"><b>Premise space</b><span>z₁ = x₂ (hot valve), z₂ = x₅ (cold valve)</span></div><div class="bench-b" id="tsplane"></div></div>
+    <div class="stack" style="align-content:start">
+      <div class="bench"><div class="bench-h"><b>Weights</b><span class="mono" id="msum"></span></div><div class="bench-b" id="tsbars"></div></div>
+      <div class="bench"><div class="bench-h"><b>T₂: nonlinear vs T–S</b></div><div class="bench-b" id="tsroll"></div></div>
+    </div>
+  </div>
+  <div id="eq2"></div>
+</div></section>
+
+<section id="vehicle"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">04 · Where this is used in a real vehicle</p><h2 data-fr="Gestion thermique du véhicule électrique">EV thermal management</h2></div>
+  <div class="bench"><div class="bench-b"><div id="vth"></div></div></div>
+  <div class="where" id="where"></div>
+  <div class="result">
+    <div><span>Input</span><p>valve currents u₁, u₂</p></div><div><span>Model</span><p>6-state nonlinear, linearised at 60 / 40 °C</p></div>
+    <div><span>Control</span><p>u = −K x̂ + N r, poles −1…−6</p></div><div><span>Estimation</span><p>Luenberger, poles −3…−18</p></div>
+    <div><span>Result</span><p>T₂, T₄ track the references; small static error away from the linearisation point</p></div>
+    <div><span>Conclusion</span><p>Integral action or gain scheduling on the T–S models would remove the offset over a wide range.</p></div>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap"><a class="crumb" href="../index.html">← Saad Mahfoudi</a><span class="mono">Simulated with the parameters of the original study</span></div></footer>
+
+<script src="../assets/js/site.js"></script>
+<script src="../assets/js/lab/ui.js"></script>
+<script src="../assets/data/thermal.js"></script>
+<script src="../assets/js/lab/page-thermal.js"></script>
+</body>
+</html>

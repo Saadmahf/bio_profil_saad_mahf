@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HV Validation Lab · Saad Mahfoudi</title>
+<meta name="description" content="HV network validation method: signal acquisition on an EV high-voltage bus, time and frequency-domain ripple analysis, modulation comparison, DC-link capacitor optimisation and AC impedance analysis.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/css/site.css">
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="../index.html"><i>SM</i><span>Saad Mahfoudi</span></a>
+  <nav class="nav" aria-label="Sections"><a href="#net">HV network</a><a href="#ripple">Ripple</a><a href="#cmp">Strategies</a><a href="#cap">Capacitor</a><a href="#bode">AC analysis</a></nav>
+  <div class="tools"><button class="iconbtn" type="button" data-fr-toggle aria-pressed="true" title="Show French translation on hover">FR</button><button class="iconbtn" type="button" data-theme-toggle>☀ Light</button></div>
+</div></header>
+
+<main>
+<div class="wrap p-hero">
+  <a class="crumb" href="../index.html#career">← career</a>
+  <p class="eyebrow" style="margin-top:22px">Capgemini Engineering · client Stellantis · HV Safety Integration</p>
+  <h1 style="margin-top:12px;font-size:clamp(2rem,4.6vw,3.3rem)" data-fr="Laboratoire de validation du réseau HV">HV network validation lab</h1>
+  <p class="lead" style="margin-top:14px" data-fr="La méthode que j'applique : acquisition sur le réseau HV, analyse temporelle et fréquentielle, comparaison à une limite, verdict, plan d'action. Puis optimisation du condensateur du bus DC par analyse AC.">The method I apply: acquire signals on the HV network, analyse them in time and frequency, compare with a limit, give a verdict and an action plan. Then use the same analysis to size the DC-link capacitor.</p>
+  <div class="note" style="margin-top:16px" data-fr="Aucune donnée, limite ou mesure Stellantis n'est utilisée ici. Les seuils sont des valeurs de démonstration et les signaux viennent d'un modèle.">No Stellantis data, limits or measurements are shown. Thresholds are <b>illustrative demonstration values</b> and every waveform comes from an in-browser model of a generic EV HV network.</div>
+</div>
+
+<section id="net" style="border-top:1px solid var(--line)"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">01 · HV network &amp; acquisition points</p><h2 data-fr="Où les signaux sont acquis">Where signals are acquired</h2>
+  <p class="lead" data-fr="Cliquez une sonde CH1–CH6 : le signal part vers la chaîne d'analyse.">Click a probe CH1–CH6: the signal travels into the analysis chain below.</p></div>
+  <div class="lab">
+    <aside class="ctrl" id="op" aria-label="Operating point">
+      <div class="mono" style="font-size:.72rem;color:var(--muted)">OPERATING POINT</div>
+      <label>motor speed <b data-o="rpm">6000 rpm</b><input type="range" id="rpm" min="300" max="11000" step="100" value="6000"></label>
+      <label>torque request <b data-o="tq">120 Nm</b><input type="range" id="tq" min="-200" max="300" step="5" value="120"></label>
+      <label>modulation<select id="st"><option value="auto">Auto (region controller)</option><option value="spwm">SPWM</option><option value="svpwm">SVPWM</option><option value="ovm">Overmodulation</option><option value="six">Six-step</option></select></label>
+      <label>switching frequency<select id="fsw"><option value="5000">5 kHz</option><option value="10000" selected>10 kHz</option><option value="16000">16 kHz</option><option value="20000">20 kHz</option></select></label>
+      <label>V<sub>dc</sub> <b data-o="vdc">380 V</b><input type="range" id="vdc" min="250" max="450" step="5" value="380"></label>
+      <div class="row"><button type="button" class="iconbtn" data-aux="dcdc" aria-pressed="true">DC/DC</button><button type="button" class="iconbtn" data-aux="comp" aria-pressed="true">e-compressor</button><button type="button" class="iconbtn" data-aux="heater" aria-pressed="false">water heater</button></div>
+      <hr><div class="mono" style="font-size:.72rem;color:var(--muted)">DC LINK</div>
+      <label>C<sub>link</sub> <b data-o="c">500 µF</b><input type="range" id="c" min="100" max="1500" step="20" value="500"></label>
+      <label>ESR <b data-o="esr">1.0 mΩ</b><input type="range" id="esr" min="0.2" max="10" step="0.1" value="1"></label>
+      <label>battery-side L <b data-o="lb">5 µH</b><input type="range" id="lb" min="1" max="30" step="0.5" value="5"></label>
+      <label>ripple limit (illustrative) <b data-o="th">3.0 % pk-pk</b><input type="range" id="th" min="0.5" max="6" step="0.1" value="3"></label>
+    </aside>
+    <div class="stack">
+      <div class="bench"><div class="bench-h"><b>EV HV network</b> · current &amp; voltage paths<span>probes CH1–CH6</span></div><div class="bench-b"><div id="net-arch"></div></div><div class="bench-f"><div class="infopanel" id="netinfo"></div></div></div>
+      <div class="bench"><div class="bench-h"><b>Analysis chain</b><span id="chainstat" class="mono"></span></div><div class="bench-b"><div id="flow"></div></div></div>
+    </div>
+  </div>
+</div></section>
+
+<section id="ripple"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">02 · Ripple analysis</p><h2 data-fr="Temps → FFT → pics → amplitude → comparaison">Time → FFT → peaks → amplitude → comparison</h2></div>
+  <div class="bench"><div class="bench-h"><b>Time domain</b><span id="tstat" class="mono"></span></div><div class="bench-b" id="tscope"></div></div>
+  <div class="split">
+    <div class="bench"><div class="bench-h"><b>Spectrum of the selected channel</b></div><div class="bench-b" id="tfft"></div></div>
+    <div class="stack" style="align-content:start"><div class="dash" id="metrics"></div><div class="infopanel" id="verdict"></div></div>
+  </div>
+</div></section>
+
+<section id="cmp"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">03 · Modulation vs HV quality</p><h2 data-fr="Même système, quatre stratégies">Same system, four strategies</h2>
+  <p class="lead" data-fr="Même vitesse, même couple demandé. Cliquez une ligne pour afficher ses signaux.">Same speed, same torque request. Each strategy solves its own operating point (flux weakening when its voltage limit is reached). Click a row to load it above.</p></div>
+  <div class="bench scroll-x"><table class="cmp" id="cmptab"></table></div>
+  <div class="bench"><div class="bench-h"><b>V<sub>bus</sub> spectra overlay</b><span>same scale</span></div><div class="bench-b" id="cmpspec"></div></div>
+</div></section>
+
+<section id="cap"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">04 · DC-bus capacitor optimisation by AC analysis</p><h2 data-fr="Le plus petit condensateur qui respecte la limite">The smallest capacitor that meets the limit</h2></div>
+  <div class="bench"><div class="bench-b"><div id="capflow"></div></div></div>
+  <div class="split">
+    <div class="bench"><div class="bench-h"><b>Ripple vs C<sub>link</sub></b> · worst case over 3 operating points<span id="capstat" class="mono"></span></div><div class="bench-b"><div id="capplot"></div><div class="legend" id="caplg"></div></div></div>
+    <div class="stack" style="align-content:start"><div class="dash" id="capdash"></div><div class="infopanel" id="capnote"></div><button class="btn hv" type="button" id="sweep">Run capacitor sweep</button></div>
+  </div>
+  <div class="note" data-fr="La conception réelle dépend de l'impédance, du comportement de commutation, du point de fonctionnement, de l'ESR/ESL, des contraintes thermiques et des transitoires.">This is not “choose the largest capacitor”. A real design also depends on the network impedance, switching behaviour, operating point, ESR/ESL, the capacitor's RMS-current and thermal rating, transient (load-dump, precharge, short-circuit) requirements, and packaging. A larger C lowers ripple but adds volume, cost and stored energy (½CV²) that the discharge circuit must remove.</div>
+  <div id="cap-eq"></div>
+</div></section>
+
+<section id="bode"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">05 · AC / impedance analysis</p><h2 data-fr="Impédance vue par l'onduleur">Impedance seen by the inverter</h2>
+  <p class="lead" data-fr="Si une raie d'excitation tombe sur un pic d'impédance, le ripple explose.">If an excitation line from the inverter falls on an impedance peak, the ripple is amplified. The sweep marker reads |Z| and phase.</p></div>
+  <div class="split">
+    <div class="bench"><div class="bench-h"><b>|Z(f)| and ∠Z(f)</b><span class="mono" id="bodestat"></span></div><div class="bench-b"><div id="bodeplot"></div></div></div>
+    <div class="stack" style="align-content:start">
+      <div class="bench"><div class="bench-h"><b>Equivalent circuit</b></div><div class="bench-b"><svg id="ckt" class="chart" viewBox="0 0 340 172" aria-label="DC link equivalent circuit"></svg></div></div>
+      <label class="lablbl">capacitor ESL <b data-o="esl" style="color:var(--ink)">20 nH</b><input type="range" id="esl" min="5" max="80" step="1" value="20"></label>
+      <div class="dash" id="bodedash"></div>
+    </div>
+  </div>
+  <div class="result">
+    <div><span>Input</span><p>HV loads, operating points, modulation</p></div>
+    <div><span>Model</span><p>inverter i<sub>dc</sub> + aux currents into battery R-L ∥ C<sub>link</sub></p></div>
+    <div><span>Signal</span><p>V<sub>bus</sub>, I<sub>bus</sub>, branch currents</p></div>
+    <div><span>Analysis</span><p>pk-pk, RMS, FFT peaks, worst-case frequency, Z(f)</p></div>
+    <div><span>Result</span><p>verdict vs an <b>illustrative</b> limit, minimum C</p></div>
+    <div><span>Conclusion</span><p>C<sub>link</sub> is chosen from ripple, RMS current and resonance placement together.</p></div>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap"><a class="crumb" href="../index.html">← Saad Mahfoudi</a><span class="mono">Illustrative model · no OEM data or limits</span></div></footer>
+
+<script src="../assets/js/site.js"></script>
+<script src="../assets/js/lab/core.js"></script>
+<script src="../assets/js/lab/ui.js"></script>
+<script src="../assets/js/lab/page-hv.js"></script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BMS Supervisor · Saad Mahfoudi</title>
+<meta name="description" content="BMS proof of concept in Simulink/Stateflow: 2×14S pack supervisor with precharge, contactors, balancing, fault handling, EKF SOC and SOP, replayed from a logged simulation run.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/css/site.css">
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<style>
+.replay{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.replay input[type=range]{flex:1;min-width:180px;accent-color:var(--hv)}
+.strip{position:relative;height:34px;border-radius:6px;overflow:hidden;display:flex;border:1px solid var(--line)}
+.strip span{height:100%;display:flex;align-items:center;justify-content:center;font:600 .66rem var(--f-mono);color:var(--ink);white-space:nowrap;overflow:hidden;border-right:1px solid var(--surface)}
+.code{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:12px/1.55 var(--f-mono);white-space:pre;overflow:auto;max-height:300px;margin:0}
+.arch-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px}
+@media (max-width:900px){.arch-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="../index.html"><i>SM</i><span>Saad Mahfoudi</span></a>
+  <nav class="nav" aria-label="Sections"><a href="#arch">Architecture</a><a href="#chart">Stateflow</a><a href="#replay">Replay</a><a href="#protect">Protection</a><a href="#tests">Tests</a><a href="ev-twin.html">EV twin</a></nav>
+  <div class="tools"><button class="iconbtn" type="button" data-fr-toggle aria-pressed="true" title="Show French translation on hover">FR</button><button class="iconbtn" type="button" data-theme-toggle>☀ Light</button></div>
+</div></header>
+
+<main>
+<div class="wrap p-hero">
+  <a class="crumb" href="../index.html#projects">← all work</a>
+  <p class="eyebrow" style="margin-top:22px" data-fr="Gestion batterie · PoC interne Capgemini Engineering">Battery management · Capgemini Engineering internal PoC</p>
+  <h1 style="margin-top:12px;font-size:clamp(2rem,4.6vw,3.3rem)" data-fr="Superviseur BMS pour deux packs de 14 cellules">BMS supervisor for a two-pack, 14-series battery</h1>
+  <p class="lead" style="margin-top:14px" data-fr="Mon rôle : rédaction des spécifications techniques et modélisation Simulink (superviseur Stateflow, estimation SOC, SOP). Le matériel est l'étape suivante.">My role: technical specification and Simulink modelling (Stateflow supervisor, SOC estimation, SOP). Hardware is the next phase.</p>
+  <dl class="spec">
+    <div><dt>Topology</dt><dd>2 × 14S, parallel</dd></div>
+    <div><dt>Capacity</dt><dd>2 × 50 Ah = 100 Ah</dd></div>
+    <div><dt>Cell window</dt><dd>2.5 – 4.2 V</dd></div>
+    <div><dt>Bus at full charge</dt><dd>58.9 V</dd></div>
+    <div><dt>I discharge / charge max</dt><dd>288 / 144 A</dd></div>
+    <div><dt>Precharge done</dt><dd>V<sub>link</sub> ≥ 95 % V<sub>bus</sub></dd></div>
+    <div><dt>Supervisor step</dt><dd>10 ms</dd></div>
+    <div><dt>Cell model</dt><dd>HPPC 1-RC, 22 SOC × 3 T</dd></div>
+  </dl>
+</div>
+
+<section id="arch" style="border-top:1px solid var(--line)"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:8px"><p class="eyebrow">01 · Architecture</p><h2 data-fr="Ce que contient le modèle">What the model contains</h2></div>
+  <div class="stack">
+    <div class="bench"><div class="bench-h"><b>Model data flow</b><span>Simulink top level, simplified</span></div>
+      <div class="bench-b scroll-x"><svg id="arch-svg" class="chart" viewBox="0 0 760 360" style="min-width:620px" aria-label="BMS model architecture"></svg></div></div>
+  </div>
+  <div class="arch-grid">
+    <div class="bench"><div class="bench-h"><span><span class="dot-live"></span><b>Power path</b></span><span>follows the replay below</span></div>
+      <div class="bench-b" id="power"></div></div>
+  <div class="stack" style="align-content:start">
+    <div class="note" data-fr="SOC : filtre de Kalman étendu par cellule sur un modèle 1-RC, comparé au comptage coulométrique.">SOC: an extended Kalman filter per cell on a 1-RC model, checked against coulomb counting.</div>
+    <div class="note" data-fr="SOP : courant et puissance disponibles en charge et décharge, utilisés pour limiter la demande de courant.">SOP: available charge/discharge current and power, used to limit the current request.</div>
+    <div class="note" data-fr="Console web : FastAPI + MATLAB Engine pour piloter le modèle, tracer les signaux et lancer des scénarios.">Web console: FastAPI + MATLAB Engine to drive the live model, plot any signal and run test scenarios.</div>
+  </div></div>
+</div></section>
+
+<section id="chart"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:8px"><p class="eyebrow">02 · Stateflow supervisor</p><h2 data-fr="Le vrai chart : 19 états, 36 transitions">The real chart — 19 states, 36 transitions</h2>
+  <p class="lead" data-fr="Redessiné depuis le fichier du modèle. Cliquez un état pour lire son code.">Redrawn from the model file. Click a state to read its actions.</p></div>
+  <div class="stack">
+    <div class="bench"><div class="bench-h"><b>BMS_Supervisor</b><span id="sf-active">active: —</span></div><div class="bench-b scroll-x"><div id="sf" style="min-width:700px"></div></div></div>
+    <div class="bench"><div class="bench-h"><b id="code-title">M_Precharge</b><span>state actions</span></div><div class="bench-b"><pre class="code" id="code"></pre></div>
+      <div class="bench-f" data-fr="Code tel qu'écrit dans le chart (commentaires retirés).">Code as written in the chart, comments removed.</div></div>
+  </div>
+</div></section>
+
+<section id="replay"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:8px"><p class="eyebrow">03 · Logged run replay</p><h2 data-fr="Relecture d'un essai : défaut, réarmement, précharge, décharge, charge">Replay of one run: fault, reset, precharge, discharge, charge</h2>
+  <p class="lead" data-fr="Données enregistrées par la console (RUN_007, 74 s, 741 signaux). Le chart et le schéma ci-dessus suivent le curseur.">Logged by the web console (RUN_007, 74 s, 741 signals). The chart and power path above follow the cursor.</p></div>
+  <div class="bench">
+    <div class="bench-h replay">
+      <button class="iconbtn" type="button" id="play" aria-label="Play replay">▶ Play</button>
+      <span class="seg" role="group" aria-label="Replay speed"><button type="button" data-sp="2" aria-pressed="false">2×</button><button type="button" data-sp="5" aria-pressed="true">5×</button><button type="button" data-sp="15" aria-pressed="false">15×</button></span>
+      <label class="sr" for="scrub" style="position:absolute;left:-9999px">Replay time</label>
+      <input type="range" id="scrub" min="0" max="74.1" step="0.02" value="49.2">
+      <b class="mono" id="tnow" style="color:var(--ink);min-width:70px">t = 49.2 s</b>
+    </div>
+    <div class="bench-b"><div class="strip" id="strip"></div>
+      <div class="legend" style="margin-top:8px"><span>state timeline: click to jump</span></div></div>
+  </div>
+  <div class="grid2">
+    <div class="bench"><div class="bench-h"><b>Current chain</b><span>request → SOP limit → command</span></div><div class="bench-b"><div id="ich"></div><div class="legend" id="ich-lg"></div></div>
+      <div class="bench-f" data-fr="La demande brute (jusqu'à 360 A) est limitée en pente et par le SOP avant d'atteindre la batterie.">The raw request (up to 360 A) is rate-limited and capped by SOP before it reaches the pack.</div></div>
+    <div class="bench"><div class="bench-h"><b>Bus voltage</b><span>V<sub>bus</sub> vs V<sub>link</sub></span></div><div class="bench-b"><div id="vch"></div><div class="legend" id="vch-lg"></div></div>
+      <div class="bench-f" data-fr="Chute du bus sous charge puis remontée pendant la charge.">Bus sags under discharge and recovers during charge.</div></div>
+    <div class="bench"><div class="bench-h"><b>SOC</b><span>EKF vs reference</span></div><div class="bench-b"><div id="soc"></div><div class="legend" id="soc-lg"></div></div>
+      <div class="bench-f" data-fr="Écart maximal entre l'EKF et la référence inférieur à 0,01 point de SOC sur l'essai.">EKF and reference stay within <b id="socerr">0.01</b> SOC points across the run.</div></div>
+    <div class="bench"><div class="bench-h"><b>State of power</b><span>SOP and available discharge power</span></div><div class="bench-b"><div id="sop"></div><div class="legend" id="sop-lg"></div></div></div>
+  </div>
+  <div class="note" data-fr="Constat de cet essai : au démarrage, les tensions cellules valent 0 V pendant 0,5 s, ce qui lève UV et SNS (capteur) après l'anti-rebond. Correctif retenu : masquer les défauts tant que les mesures ne sont pas valides.">Finding from this run: at start-up the cell voltages read 0 V for 0.5 s, so UV and sensor-plausibility faults latch right after their 0.5 s debounce. The run only continues after a manual reset at 48.7 s. Fix: inhibit fault evaluation until the measurement chain is valid.</div>
+</div></section>
+
+<section id="protect"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:8px"><p class="eyebrow">04 · Protection</p><h2 data-fr="Seuils et anti-rebond">Thresholds and debounce</h2></div>
+  <div class="bench scroll-x"><table class="verdicts">
+    <thead><tr><th>Fault</th><th>Condition</th><th>Debounce</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td>OV</td><td class="mono">V<sub>max</sub> &gt; 4.25 V</td><td>0.5 s</td><td rowspan="6" data-fr="Passage en Fault : contacteurs ouverts, I_cmd = 0, réarmement seulement si plus aucun défaut">Go to <b>Fault</b>: all contactors open, I_cmd = 0. Exit only when no fault is present and reset is requested.</td></tr>
+      <tr><td>UV</td><td class="mono">V<sub>min</sub> &lt; 2.50 V</td><td>0.5 s</td></tr>
+      <tr><td>OT / UT</td><td class="mono">T &gt; 55 °C · T &lt; −20 °C</td><td>0.5 s</td></tr>
+      <tr><td>OC</td><td class="mono">I &gt; 350 A dch · 180 A chg</td><td>50 ms</td></tr>
+      <tr><td>SNS</td><td class="mono">cell reading outside 0.5–5.0 V</td><td>0.5 s</td></tr>
+      <tr><td>PRE</td><td class="mono">precharge not done after 5 s</td><td>—</td></tr>
+    </tbody></table></div>
+  <div class="grid3">
+    <div class="kpi" style="border:1px solid var(--line);border-radius:var(--r)"><b>20 <em>/</em> 10 mV</b><span data-fr="Équilibrage : début si ΔV > 20 mV et Vmax > 4,0 V ; fin sous 10 mV">balancing on / off (ΔV), only above 4.00 V</span></div>
+    <div class="kpi" style="border:1px solid var(--line);border-radius:var(--r)"><b>10 <em>/</em> 5 A</b><span data-fr="Seuils traction/régénération avec anti-rebond de 0,2 s">traction/regen entry / exit, 0.2 s debounce</span></div>
+    <div class="kpi" style="border:1px solid var(--line);border-radius:var(--r)"><b>0.5 <em>–</em> 5 s</b><span data-fr="Fenêtre de précharge : durée minimale et timeout">precharge window: minimum time and timeout</span></div>
+  </div>
+</div></section>
+
+<section id="tests"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:8px"><p class="eyebrow">05 · Test scenarios</p><h2 data-fr="7 scénarios JSON, critères liés aux paramètres">7 JSON scenarios, limits tied to parameters</h2>
+  <p class="lead" data-fr="Chaque critère cite la source de sa limite (paramètre ou spécification).">Each criterion cites where its limit comes from: a model parameter or the spec.</p></div>
+  <div class="chips"><span class="chip k">Auto drive cycle</span><span class="chip k">Charge + balancing</span><span class="chip k">Precharge failure</span><span class="chip">Discharge to empty</span><span class="chip">Overcurrent</span><span class="chip">Over-temperature</span><span class="chip">Cold charge</span></div>
+  <div class="bench scroll-x"><table class="verdicts">
+    <thead><tr><th>Scenario</th><th>ID</th><th>Requirement</th><th>Limit source</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="5">Auto drive cycle</td><td>R1</td><td>Precharge completes</td><td>chart: A_Precharge → A_Drive</td></tr>
+      <tr><td>R2 / R3</td><td>Traction (22) and regen (23) states reached</td><td>I<sub>cmd</sub> beyond ±I_DB_ON</td></tr>
+      <tr><td>R4</td><td>I<sub>cmd</sub> ≤ discharge saturation</td><td>param I_DCH_MAX</td></tr>
+      <tr><td>R5</td><td>I<sub>cmd</sub> ≥ −charge saturation</td><td>param I_CHG_MAX</td></tr>
+      <tr><td>R_NF</td><td>No latched fault</td><td>nominal test definition</td></tr>
+      <tr><td rowspan="3">Charge + balancing<br><span class="muted">120 A from 80 % SOC, 3.5 % spread</span></td><td>R1</td><td>V<sub>max</sub> ≤ over-voltage threshold</td><td>param V_OV</td></tr>
+      <tr><td>R2</td><td>Balancing activates during charge</td><td>spread &gt; BAL_ON</td></tr>
+      <tr><td>R3</td><td>Charge current within saturation</td><td>param I_CHG_MAX</td></tr>
+      <tr><td rowspan="3">Precharge failure<br><span class="muted">V<sub>link</sub> blocked</span></td><td>R1</td><td>FaultFlag_PRE raised</td><td>chart: precharge &gt; T_PRE_MAX</td></tr>
+      <tr><td>R2</td><td>Fault by T_PRE_MAX + 0.1 s</td><td>param T_PRE_MAX</td></tr>
+      <tr><td>R3</td><td>Main contactor never closes</td><td>chart: KM only after precharge</td></tr>
+    </tbody></table></div>
+  <div class="bench"><div class="bench-h"><b>Automatic-mode input</b> · urban high-load current profile<span>positive = discharge</span></div><div class="bench-b"><div id="cycle"></div></div></div>
+</div></section>
+<section id="pictures"><div class="wrap stack">
+  <div class="sec-head" style="margin-bottom:0"><p class="eyebrow">Real screenshots</p><h2>My BMS engineering console</h2><p class="lead">The web console I built (FastAPI + MATLAB Engine) to drive, observe and test the Simulink/Stateflow model. Shown here in its built-in demo mode.</p></div>
+  <div class="gallery big"><button type="button" data-zoom="../assets/img/bmsdash-overview.jpg" data-cap="Overview · live values and supervisor state"><img src="../assets/img/bmsdash-overview.jpg" alt="Overview · live values and supervisor state" loading="lazy"><span>Overview · live values and supervisor state</span></button><button type="button" data-zoom="../assets/img/bmsdash-scope.jpg" data-cap="Oscilloscope · currents, bus voltages, cell min/max, state code"><img src="../assets/img/bmsdash-scope.jpg" alt="Oscilloscope · currents, bus voltages, cell min/max, state code" loading="lazy"><span>Oscilloscope · currents, bus voltages, cell min/max, state code</span></button><button type="button" data-zoom="../assets/img/bmsdash-cells.jpg" data-cap="BMS · 2 × 14 cell voltages, contactors"><img src="../assets/img/bmsdash-cells.jpg" alt="BMS · 2 × 14 cell voltages, contactors" loading="lazy"><span>BMS · 2 × 14 cell voltages, contactors</span></button><button type="button" data-zoom="../assets/img/bmsdash-control.jpg" data-cap="Control / PCB · power circuit and state machine"><img src="../assets/img/bmsdash-control.jpg" alt="Control / PCB · power circuit and state machine" loading="lazy"><span>Control / PCB · power circuit and state machine</span></button><button type="button" data-zoom="../assets/img/bmsdash-energy.jpg" data-cap="Energy flow · regeneration"><img src="../assets/img/bmsdash-energy.jpg" alt="Energy flow · regeneration" loading="lazy"><span>Energy flow · regeneration</span></button><button type="button" data-zoom="../assets/img/bmsdash-tests.jpg" data-cap="Tests · JSON scenarios with limit sources"><img src="../assets/img/bmsdash-tests.jpg" alt="Tests · JSON scenarios with limit sources" loading="lazy"><span>Tests · JSON scenarios with limit sources</span></button></div>
+</div></section>
+</main>
+
+<footer><div class="wrap"><a class="crumb" href="../index.html">← Saad Mahfoudi</a><span class="mono" data-fr="PoC interne : paramètres génériques du modèle, pas de données client">Internal PoC: generic model parameters, no customer data</span></div></footer>
+
+<script src="../assets/js/site.js"></script>
+<script src="../assets/js/bms-diagrams.js"></script>
+<script src="../assets/data/bms.js"></script>
+<script src="../assets/data/bms-states.js"></script>
+<script src="../assets/js/page-bms.js"></script>
+</body>
+</html>
